@@ -1,4 +1,4 @@
-# gRPC Cloud Run Golang
+# Golang gRPC Cloud Run Golang
 
 See:
 

@@ -17,17 +17,13 @@ const (
 	serviceName = "grpc-cloudrun-server"
 )
 
-var (
-	// Cloud Run requires ability to set service endpoint with PORT environment variable
-	port = os.Getenv("PORT")
-)
-
 func main() {
 	log.Printf("Starting: %s", serviceName)
 	defer func() {
 		log.Printf("Stopping:%s", serviceName)
 	}()
 
+	port = os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}

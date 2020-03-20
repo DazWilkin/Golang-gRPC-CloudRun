@@ -1,0 +1,87 @@
+# Dependencies:
+
+version: "3"
+
+services:
+  grpc-cloudrun-server:
+    restart: always
+    image: gcr.io/${PROJECT}/server:${TAG}
+    container_name: grpc-cloudrun-server
+    # build:
+    #   context: .
+    #   dockerfile: deployment/Dockerfile.server
+    #   args:
+    #     - VERS=3.11.4
+    command:
+      - --grpc_endpoint=:50051
+      - --cnss_endpoint=opencensus-agent:55678
+      - --zpgz_endpoint=:9999
+    expose:
+      - "50051" # gRPC
+      - "9999" # zPages
+    ports:
+      - 9996:9999
+      - 52051:50051
+
+  grpc-cloudrun-client:
+    restart: always
+    depends_on:
+      - grpc-cloudrun-server
+    image: gcr.io/${PROJECT}/client:${TAG}
+    container_name: grpc-cloudrun-client
+    # build:
+    #   context: .
+    #   dockerfile: deployment/Dockerfile.client
+    #   args:
+    #     - VERS=3.11.4
+    command:
+      - --grpc_endpoint=grpc-cloudrun-server:50051
+      - --cnss_endpoint=opencensus-agent:55678
+      - --zpgz_endpoint=:9999
+    expose:
+      - "9999" # zPages
+    ports:
+      - 9995:9999
+
+  cadvisor:
+    restart: always
+    image: google/cadvisor:${CADVISOR_VERSION}
+    container_name: cadvisor
+    volumes:
+      - "/:/rootfs:ro"
+      - "/var/run:/var/run:rw"
+      - "/sys:/sys:ro"
+      - "/var/snap/docker/current:/var/lib/docker:ro" #- "/var/lib/docker/:/var/lib/docker:ro"
+    expose:
+      - "8080"
+    ports:
+      - 8085:8080
+
+  prometheus:
+    restart: always
+    depends_on:
+      - opencensus-agent
+    image: prom/prometheus:${PROMETHEUS_VERSION}
+    container_name: prometheus
+    volumes:
+      - "${PWD}/prometheus.yml:/etc/prometheus/prometheus.yml"
+    expose:
+      - "9090" # Default HTTP Endpoint
+    ports:
+      - 9090:9090
+
+  opencensus-agent:
+    image: omnition/opencensus-agent:${OPENCENSUS_AGENT_VERSION}
+    container_name: opencensus-agent
+    command:
+      - --config=/configs/ocagent.yaml
+    volumes:
+      - "${PWD}/ocagent.yaml:/configs/ocagent.yaml"
+    expose:
+      - "9100" # ocagent.yaml defined Prometheus Exporter
+      - "9999" # ocagent.yaml defined zPages
+      - "55678" # ocagent.yaml defined OpenCensus Receiver
+    ports:
+      - 9100:9100 # Debugging: Prometheus Metrics Exporter
+      - 9999:9999 # Debugging: zPages
+      - "55678:55678" # Debugging: Receiver -- Access Endpoint Externally

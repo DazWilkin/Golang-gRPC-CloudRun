@@ -31,7 +31,7 @@ func main() {
 	if port == "" {
 		log.Fatal("service requires `PORT` environment value to be set")
 	}
-	grpcEndpoint := fmt.Sprintf(":%s", port)
+	grpcEndpoint := fmt.Sprintf("0.0.0.0:%s", port)
 	log.Printf("gRPC endpoint [%s]", grpcEndpoint)
 
 	grpcServer := grpc.NewServer()

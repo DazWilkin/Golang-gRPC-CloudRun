@@ -9,4 +9,5 @@ EXPOSE 9999
 
 
 ENTRYPOINT ["/server"]
-CMD ["--grpc_endpoint=:50051","--cnss_endpoint=:55678","--zpgz_endpoint=:9999"]
+# --grpc_endpoint value to be set by the environment
+CMD ["--cnss_endpoint=:55678","--zpgz_endpoint=:9999"]

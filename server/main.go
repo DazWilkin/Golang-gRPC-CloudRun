@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -26,8 +27,13 @@ const (
 )
 
 var (
+	// Cloud Run requires ability to set service endpoint with PORT environment variable
+	port = os.Getenv("PORT")
+)
+
+var (
+	// If set, grpcEndpoint overrides PORT environment value
 	grpcEndpoint = flag.String("grpc_endpoint", ":50051", "The gRPC endpoint to listen on.")
-	// httpEndpoint = flag.String("http_endpoint", "", "The HTTP endpoint to listen to.")
 	cnssEndpoint = flag.String("cnss_endpoint", "", "The gRPC endpoint of the OpenCensus Agent.")
 	zpgzEndpoint = flag.String("zpgz_endpoint", ":9998", "The port to export zPages.")
 	tLogEndpoint = flag.String("tlog_endpoint", "", "The gRPC endpoint of the Trillian Log Server.")
@@ -42,6 +48,15 @@ func main() {
 	}()
 
 	flag.Parse()
+	if *grpcEndpoint == "" {
+		if port == "" {
+			log.Fatal("service requires either `--grpcEndpoint` or `PORT` environment value to be set")
+		}
+		// if port has a value and grpcEndpoint does not, set grpcEndpoint to the value of port
+
+		*grpcEndpoint = port
+	}
+	log.Printf("Service's gRPC endpoint: %s", *grpcEndpoint)
 
 	if err := view.Register(ocgrpc.DefaultServerViews...); err != nil {
 		log.Fatal(err)

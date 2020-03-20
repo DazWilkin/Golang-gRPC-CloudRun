@@ -43,7 +43,53 @@ protoc \
 
 Should result in `./protos/calculator.pb`
 
-## Server
+## Build
+
+### Project
+
+```bash
+BILLING=...
+PROJECT="golang-grpc-cloudrun"
+gcloud projects create ${PROJECT}
+gcloud beta billing projects link ${PROJECT} --billing-account=${BILLING}
+gcloud services enable cloudbuild.googleapis.com --project=${PROJECT}
+```
+
+
+### Cloud Build
+
+```bash
+PROJECT="golang-grpc-cloudrun"
+TAG=$(git rev-parse HEAD) && echo ${TAG}
+gcloud builds submit . \
+--config=./cloudbuild.yaml \
+--substitutions=COMMIT_SHA=${TAG} \
+--project=${PROJECT}
+```
+
+## Run
+
+### Docker Compose
+
+Includes:
+
++ `grpc-cloudrun-server`
++ `grpc-cloudrun-client`
++ `cadvisor`
++ `opencensus-agent`
++ `prometheus`
+
+
+```bash
+TAG=$(git rev-parse HEAD) \
+PROJECT=${PROJECT} \
+docker-compose up
+```
+
+
+### Standalone
+
+##### Server
 
 ```bash
 go run server/*.go
@@ -58,7 +104,7 @@ go run server/*.go
 2020/03/19 14:15:00 [server:Calculate] Started
 ```
 
-## Client
+#### Client
 
 ```bash
 go run client/*.go

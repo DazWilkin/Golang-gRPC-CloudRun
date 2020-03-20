@@ -1,0 +1,12 @@
+FROM scratch
+
+COPY ./ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY ./bin/server /server
+
+USER 999
+
+EXPOSE 9999
+
+
+ENTRYPOINT ["/server"]
+CMD ["--grpc_endpoint=:50051","--cnss_endpoint=:55678","--zpgz_endpoint=:9999"]

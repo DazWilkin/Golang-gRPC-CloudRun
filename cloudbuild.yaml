@@ -1,0 +1,121 @@
+#
+# TAG=$(git rev-parse HEAD)
+# gcloud builds submit \
+# --config=./cloudbuild.yaml \
+# --substitutions=COMMIT_SHA=${TAG} \
+# --project=${PROJECT}
+#
+# Could use `options` to provide `env` and `volumes` globally
+# For simplicity, using `env` and `volumes` as-needed by steps
+#
+# options:
+#   env:
+#   - GOPATH=/go
+#   volumes:
+#   - name: go-modules
+#     path: /go
+
+substitutions:
+  _GOLANG_VERSION: "latest"
+  _PROTOC_VERSION: "3.11.4-linux-x86_64"
+
+steps:
+  # Need ca-certificates.crt in pypi-transparency-[client|server]
+  # Copy the file from the current Golang image
+  # Putting it in the workspace volume to be accessed in steps #5 (server) and #6 (client)
+  - name: golang:${_GOLANG_VERSION}
+    entrypoint: "/bin/bash"
+    args:
+      - "-c"
+      - "cp /etc/ssl/certs/ca-certificates.crt /workspace"
+
+  # Get protoc plugins and compile protos
+  # `Golang` image uses `/go` as a working directory
+  # Cloud Build uses `/workspace` as a working directory
+  # Source code is in `/workspace` and Golang packages go to `/go/pkg`
+  # Volume is used to share `/go` across multiple steps
+  # GOPATH is redundant; default
+  # Gets protoc-gen-go which is the Golang plugin for protoc
+  - name: golang:${_GOLANG_VERSION}
+    args:
+      - go
+      - get
+      - -u
+      - github.com/golang/protobuf/protoc-gen-go
+    volumes:
+      - name: go-modules
+        path: /go
+
+  # Protoc
+  # As a community builder this image must be created manually before use
+  # See: https://github.com/GoogleCloudPlatform/cloud-builders-community/tree/master/protoc
+  # By default protoc expects plugins (protoc-gen-go; protoc-gen-grpc-gateway) on PATH
+  # But this is challenging (possible?) with Cloud Build
+  # Instead this step explicitly references the plugins (pulled in previous steps)
+  # Using `--plugin=...` flag
+  - name: gcr.io/${PROJECT_ID}/protoc:${_PROTOC_VERSION}
+    args:
+      - --proto_path=.
+      - --plugin=protoc-gen-go=/go/bin/protoc-gen-go
+      - --go_out=plugins=grpc:.
+      - ./protos/calculator.proto
+    volumes:
+      - name: go-modules
+        path: /go
+
+  # Build Server
+  - name: golang:${_GOLANG_VERSION}
+    env:
+      - CGO_ENABLED=0
+      - GOOS=linux
+    args:
+      - go
+      - build
+      - -a
+      - -installsuffix
+      - cgo
+      - -o
+      - ./bin/server
+      - github.com/DazWilkin/Golang-gRPC-CloudRun/server
+    volumes:
+      - name: go-modules
+        path: /go
+
+  # Build Server container image
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=./deployment/Dockerfile.server.cloudbuild
+      - --tag=gcr.io/${PROJECT_ID}/server:${COMMIT_SHA}
+      - "."
+
+  # Build Client
+  - name: golang:${_GOLANG_VERSION}
+    env:
+      - CGO_ENABLED=0
+      - GOOS=linux
+    args:
+      - go
+      - build
+      - -a
+      - -installsuffix
+      - cgo
+      - -o
+      - ./bin/client
+      - github.com/DazWilkin/Golang-gRPC-CloudRun/client
+    volumes:
+      - name: go-modules
+        path: /go
+
+  # Build Client container image
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=./deployment/Dockerfile.client.cloudbuild
+      - --tag=gcr.io/${PROJECT_ID}/client:${COMMIT_SHA}
+      - "."
+
+  # Push the images
+images:
+  - gcr.io/${PROJECT_ID}/server
+  - gcr.io/${PROJECT_ID}/client

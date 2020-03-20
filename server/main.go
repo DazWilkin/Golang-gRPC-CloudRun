@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -33,7 +34,7 @@ var (
 
 var (
 	// If set, grpcEndpoint overrides PORT environment value
-	grpcEndpoint = flag.String("grpc_endpoint", ":50051", "The gRPC endpoint to listen on.")
+	grpcEndpoint = flag.String("grpc_endpoint", "", "The gRPC endpoint to listen on.")
 	cnssEndpoint = flag.String("cnss_endpoint", "", "The gRPC endpoint of the OpenCensus Agent.")
 	zpgzEndpoint = flag.String("zpgz_endpoint", ":9998", "The port to export zPages.")
 	tLogEndpoint = flag.String("tlog_endpoint", "", "The gRPC endpoint of the Trillian Log Server.")
@@ -53,10 +54,10 @@ func main() {
 			log.Fatal("service requires either `--grpcEndpoint` or `PORT` environment value to be set")
 		}
 		// if port has a value and grpcEndpoint does not, set grpcEndpoint to the value of port
-
-		*grpcEndpoint = port
+		log.Printf("Assigning gRPC Endpoint using `PORT` [%s]", port)
+		*grpcEndpoint = fmt.Sprintf(":%s", port)
 	}
-	log.Printf("Service's gRPC endpoint: %s", *grpcEndpoint)
+	log.Printf("gRPC endpoint [%s]", *grpcEndpoint)
 
 	if err := view.Register(ocgrpc.DefaultServerViews...); err != nil {
 		log.Fatal(err)
@@ -101,7 +102,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("Starting gRPC Listener [%s]\n", *grpcEndpoint)
+		log.Printf("Starting: gRPC Listener [%s]\n", *grpcEndpoint)
 		log.Fatal(grpcServer.Serve(listen))
 	}()
 	// zPages

@@ -23,7 +23,7 @@ func main() {
 		log.Printf("Stopping:%s", serviceName)
 	}()
 
-	port = os.Getenv("PORT")
+	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}

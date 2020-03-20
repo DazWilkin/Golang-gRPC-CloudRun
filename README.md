@@ -81,9 +81,28 @@ Includes:
 
 
 ```bash
-TAG=$(git rev-parse HEAD) \
-PROJECT=${PROJECT} \
+TAG=$(git rev-parse HEAD)
+PROJECT=${PROJECT}
 docker-compose up
+```
+
+### Docker Compose & Cloud Run
+
+```bash
+gcloud services enable run.googleapis.com --project=${PROJECT}
+```
+
+and:
+
+```bash
+PROJECT=${PROJECT}
+TAG=$(git rev-parse HEAD)
+gcloud run deploy grpc-cloudrun-server \
+--image=gcr.io/${PROJECT}/server:${TAG} \
+--allow-unauthenticated \
+--platform=managed \
+--project=${PROJECT} \
+--region=us-west1
 ```
 
 
@@ -122,3 +141,33 @@ go run client/*.go
 2020/03/19 14:15:00 [main] 0.152+0.753=0.905
 ```
 
+## Test
+
+Docker Compose exposes the server on `:52051`
+
+```bash
+grpcurl \
+-plaintext \
+-proto protos/calculator.proto \
+-d '{"first_operand": 2.0, "second_operand": 3.0, "operation": "ADD"}' \
+localhost:52051 \
+Calculator.Calculate
+{
+  "result": 5
+}
+```
+
+## Monitor
+
+The Docker Compose includes a configured-Prometheus [endpoint](http://localhost:9090)
+
+## Debug
+
+### zPages
+
+zPages endpoints are exposed as ports on the host:
+
+|RPCZ|TraceZ|
+|:--:|:----:|
+|[X](http://localhost:9995/debug/rpcz)|[X](http://localhost:9995/debug/tracez)|
+|[X](http://localhost:9996/debug/rpcz)|[X](http://localhost:9996/debug/tracez)|

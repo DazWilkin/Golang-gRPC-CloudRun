@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 1m
+  evaluation_interval: 1m
+
+scrape_configs:
+  # Self
+  - job_name: "prometheus-server"
+    static_configs:
+      - targets:
+          - "localhost:9090"
+
+  # PyPi Transparency Client|Server export metrics to OpenCensus Agent
+  # OpenCensus Agent is thus a proxy for PyPi Transparency Client|Server metrics
+  - job_name: "opencensus-agent"
+    static_configs:
+      - targets:
+          - "opencensus-agent:9100"
+
+  # cAdvisor exports metrics for *all* containers running on this host
+  - job_name: cadvisor
+    static_configs:
+      - targets:
+          - "cadvisor:8080"

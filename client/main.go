@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	grpcEndpoint = flag.String("gprc_endpoint", ":50051", "The gRPC Endpoint of the Server")
+	grpcEndpoint = flag.String("grpc_endpoint", ":50051", "The gRPC Endpoint of the Server")
 	cnssEndpoint = flag.String("cnss_endpoint", "", "Endpoint of the OpenCensus Agent")
 	zpgzEndpoint = flag.String("zpgz_endpoint", ":9997", "Endpoint of the zPages exporter")
 )
